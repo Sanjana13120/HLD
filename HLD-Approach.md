@@ -15,15 +15,15 @@
 
 ---
 
-### 1. Clarify Requirements — "What are we building?"
+## 1. Clarify Requirements — "What are we building?"
 
-#### Functional Requirements
+### Functional Requirements
 
 - What can the user/system do?
 - What are the core use cases?
 - What's explicitly out of scope?
 
-#### Non-Functional Requirements
+### Non-Functional Requirements
 
 - Scale
 - Latency
@@ -34,7 +34,7 @@
 
 ---
 
-### 2. Scale Estimation — "How big is this?"
+## 2. Scale Estimation — "How big is this?"
 
 Consider:
 
@@ -46,7 +46,7 @@ Consider:
 - Storage/year
 - Bandwidth
 
-**Example:**
+### Example
 
 ```text
 100M users
@@ -61,7 +61,7 @@ The goal is to understand the scale well enough to make the right architectural 
 
 ---
 
-### 3. APIs — "How do clients interact with it?"
+## 3. APIs — "How do clients interact with it?"
 
 For each important API, consider:
 
@@ -72,7 +72,7 @@ For each important API, consider:
 - Authentication/authorization where relevant
 - Idempotency where relevant
 
-**Example:**
+### Example
 
 ```text
 POST /shorten
@@ -81,7 +81,7 @@ GET /{shortCode}
 
 ---
 
-### 4. Data Model — "What data do we need?"
+## 4. Data Model — "What data do we need?"
 
 Consider:
 
@@ -92,7 +92,7 @@ Consider:
 - SQL vs NoSQL
 - Data access patterns
 
-**Example — URL Shortener:**
+### Example — URL Shortener
 
 ```text
 URLMapping
@@ -112,7 +112,7 @@ The choice should be based on the system's requirements, scale, and access patte
 
 ---
 
-### 5. High-Level Architecture — "What components do we need?"
+## 5. High-Level Architecture — "What components do we need?"
 
 Start simple.
 
@@ -146,9 +146,9 @@ Don't add components just because they are commonly used in system design.
 
 ---
 
-### 6. Deep Dives — "What happens when we scale?"
+## 6. Deep Dives — "What happens when we scale?"
 
-#### Database is getting too many reads
+### Database is getting too many reads
 
 Possible approaches:
 
@@ -157,7 +157,7 @@ Possible approaches:
 - Indexing
 - Sharding
 
-#### Application servers are overloaded
+### Application servers are overloaded
 
 Possible approaches:
 
@@ -166,7 +166,7 @@ Possible approaches:
 - Caching
 - Async processing
 
-#### A dependency is slow or unavailable
+### A dependency is slow or unavailable
 
 Possible approaches:
 
@@ -181,7 +181,7 @@ The important question is:
 
 ---
 
-### 7. Bottlenecks & Trade-offs — "What can break and why?"
+## 7. Bottlenecks & Trade-offs — "What can break and why?"
 
 Identify potential bottlenecks.
 
@@ -220,9 +220,9 @@ The goal is to choose an architecture that satisfies the requirements and scale 
 
 ---
 
-### 8. Reliability & Observability — "How do we know the system is healthy and what happens when things fail?"
+## 8. Reliability & Observability — "How do we know the system is healthy and what happens when things fail?"
 
-#### Reliability
+### Reliability
 
 - Failure handling
 - Timeouts
@@ -233,7 +233,7 @@ The goal is to choose an architecture that satisfies the requirements and scale 
 - Idempotency
 - Recovery
 
-#### Observability
+### Observability
 
 - Logging
 - Metrics
@@ -245,7 +245,7 @@ Ask:
 
 > **"What happens if this component fails?"**
 
-and
+and:
 
 > **"How would we detect the problem?"**
 
@@ -260,7 +260,7 @@ Start with the problem.
 ```text
 Requirement
      ↓
-Estimate Scale
+Scale
      ↓
 Identify Problem
      ↓
