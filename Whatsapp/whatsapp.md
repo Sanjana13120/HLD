@@ -134,94 +134,120 @@ HTTP 200 OK
 }
 ```
 
-## 4. Data modelling
+## 4. Data Modelling
 
-Message
-    - message_id      (PK)
-    - sender_id
-    - chat_id
-    - sent_at
-    - message
+### User
 
-MessageRecipient
-    - recipient_id     (PK)
-    - message_id       (PK)
-    - delivered_at
-    - read_at
+- `user_id` (PK)
+- `user_name`
+- `phone_number` (UNIQUE)
+- `last_seen`
+- `status`
 
-Composite Primary Key: (message_id, recipient_id)
+### Chat
 
-Chat
-    - chat_id          (PK)
-    - created_at
-    - chat_type (group, 1:1)
+- `chat_id` (PK)
+- `chat_type` (`1:1`, `GROUP`)
+- `created_at`
 
-ChatParticipant
-    - chat_id          (PK)
-    - user_id          (PK)
-    - joined_at
-    - left_at
+### ChatParticipant
 
-Composite Primary Key: (chat_id, user_id)
+- `chat_id` (PK)
+- `user_id` (PK)
+- `joined_at`
+- `left_at`
 
-User
-    - user_id          (PK)
-    - user_name
-    - phone_number
-    - last_seen
-    - status
+Composite Primary Key: `(chat_id, user_id)`
 
-Outbox
-    - event_id          (PK)
-    - message_id
-    - event_type
-    - created_at
-    - published_at
+### Message
 
-### Important Access Pattern
+- `message_id` (PK)
+- `chat_id`
+- `sender_id`
+- `sent_at`
+- `message`
+- `message_type` (`TEXT`, `IMAGE`, `VIDEO`, `DOCUMENT`)
+- `created_at`
+- `idempotency_key` (UNIQUE)
 
-- Fetch messages for a chat ordered by time.
-- Query using `chat_id`
-- Order by `sent_at`
+Index: `(chat_id, sent_at, message_id)`
 
-### Message History Pagination
+The `idempotency_key` prevents duplicate message creation when
+the client retries the same request.
 
-- Use **cursor-based pagination** instead of offset pagination.
-- Fetch messages using `chat_id` and `sent_at` and `message_id`.
-- **sent_at** provides chronological ordering.
-- **message_id** acts as a deterministic tie-breaker when two messages have the same timestamp.
-- The cursor contains **(sent_at, message_id).**
-- For older messages, use a cursor pointing to the oldest message currently loaded.
-- Example:  `GET /messages?before=M8&limit=50`
+### MessageRecipient
 
-### 4.1 Choosing the Database
+- `message_id` (PK)
+- `recipient_id` (PK)
+- `delivered_at`
+- `read_at`
+
+Composite Primary Key: `(message_id, recipient_id)`
+
+Used to track per-recipient delivery and read status,
+especially for groups.
+
+### Outbox
+
+- `event_id` (PK)
+- `message_id`
+- `event_type`
+- `created_at`
+- `published_at`
+
+The `Message` and `Outbox` record are created in the same
+database transaction.
+
+### Important Access Patterns
+
+1. Fetch messages for a chat ordered by time:
+   - Query using `chat_id`
+   - Order by `(sent_at, message_id)`
+
+2. Cursor-based pagination:
+   - Cursor contains `(sent_at, message_id)`
+   - Fetch older messages using:
+     `WHERE chat_id = ? AND (sent_at, message_id) < (?, ?)`
+   - `LIMIT 50`
+
+3. Find all participants of a chat:
+   - Query using `chat_id`
+
+4. Track delivery/read status:
+   - Query `MessageRecipient` using `(message_id, recipient_id)`
+
+### Choosing the Database
 
 - Use a relational database for the core messaging data.
-- Reasoning:
-  - Structured data with clear relationships between users, chats, messages and recipients.
-  - Need data integrity and transactional guarantees for important operations.
-  - Common access pattern: fetch messages by `chat_id` ordered by `sent_at`.
-  - Can partition/shard messages using `chat_id` as the initial partition key.
-- At our estimated scale (~200M messages/day), a single DB instance may not be sufficient, so we should consider partitioning/sharding as the system grows.
+- Structured relationships exist between users, chats, messages,
+  and participants.
+- Transactions provide data integrity for important operations.
+- The main message-history access pattern is:
+  `chat_id + sent_at`.
+
+At ~200M messages/day, a single database instance may not be
+sufficient, so partitioning/sharding should be introduced as
+the system grows.
 
 ### Message Indexing
 
 For the primary access pattern:
 
-- Fetch messages for a `chat_id` ordered by `sent_at`.
-- Use a composite index:  `(chat_id, sent_at, message_id)`
+- Composite index: `(chat_id, sent_at, message_id)`
 - `chat_id` filters messages for the conversation.
 - `sent_at` provides chronological ordering.
-- `message_id` acts as a deterministic tie-breaker when two messages have the same timestamp.
+- `message_id` provides a deterministic tie-breaker.
 
-This also supports cursor-based pagination using `(sent_at, message_id)`.
+This also supports cursor-based pagination.
 
 ### Sharding Trade-off
 
-- Initially, shard messages by `chat_id` as the database grows.
-- This keeps messages for a conversation together and matches the main access pattern.
-- A very large/hot chat can create a hot partition.
-- We don't need to solve this upfront; if hot partitions become a real bottleneck, we can introduce a more sophisticated partitioning strategy.
+- Initially shard messages by `chat_id`.
+- This keeps messages for a conversation together and matches
+  the primary access pattern.
+- A very large or active chat can create a hot partition.
+- If hot partitions become a bottleneck, introduce a more
+  sophisticated partitioning strategy.
 
 ## 5. High level architecture
 
